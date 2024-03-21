@@ -13,7 +13,6 @@
     $responder = new Responder();
     $errorHandler = new ErrorHandlerJson($responder);
     
-
     try {
         $dataGetter = new MySQLDataGetter(DB_HOST, DB_USER, DB_PASS, DB_NAME);
     } catch (Exception $ex){
