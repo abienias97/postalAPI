@@ -12,10 +12,18 @@
     
     $responder = new Responder();
     $errorHandler = new ErrorHandlerJson($responder);
-    $dataGetter = new MySQLDataGetter(DB_HOST, DB_USER, DB_PASS, DB_NAME, $errorHandler);
+    
+
+    try {
+        $dataGetter = new MySQLDataGetter(DB_HOST, DB_USER, DB_PASS, DB_NAME);
+    } catch (Exception $ex){
+        $errorHandler->throwError(500, 'Database connection error');
+        exit();
+    }
+
     $parser = new JsonParser();
     $encoder = new JsonEncoder();
-    $dataHandler = new DataHandler($dataGetter, $encoder);
+    $dataHandler = new DataHandler($dataGetter, $encoder, $errorHandler);
     $handler = new RequestHandler(file_get_contents('php://input'), $_SERVER["CONTENT_TYPE"], $parser, $errorHandler, $dataHandler, $responder);
     
     $handler->handleRequest();

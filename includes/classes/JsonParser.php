@@ -6,11 +6,7 @@
     {     
         public function parse($json) {
             $jsonDecoded = json_decode($json);
-            
-            if ($jsonDecoded === null) {
-                return null;
-            }
-            
+
             return $jsonDecoded;
         }
     }

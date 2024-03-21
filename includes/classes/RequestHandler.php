@@ -7,6 +7,7 @@
         private $jsonParser;
         private $errorHandler;
         private $responder;
+        private $dataHandler;
         
         public function __construct(
             string $requestData, 
@@ -24,29 +25,17 @@
             $this->responder = $responder;
         }
         
-        public function getContentType() {
-            return $this->headerData;
-        }
-        
-        public function checkHeader() {
-            return ($this->getContentType() === 'application/json');
-        }
-        
-        private function checkRequest() {
-            return ($this->requestData != '');
-        }
-        
         public function handleRequest() {
             if ($_SERVER['REQUEST_METHOD'] != 'POST') {
-                $this->errorHandler->throwError(400, 'Invalid request type');
+                $this->errorHandler->throwError(405, 'Invalid request method, please use POST');
             }
-            if ($this->checkHeader() == 0) {
+            if ($this->isContentTypeJSON() == 0) {
                 $this->errorHandler->throwError(400, 'Invalid request header, please provide Content-Type="application/json"');
             }
             
             $this->handleMessageBody();
         }
-        
+
         private function handleMessageBody() {
             if ($this->checkRequest() == 0) {
                 $this->errorHandler->throwError(400, 'Request body is empty');
@@ -68,13 +57,25 @@
             
             $this->getDataByPostalCode($jsonDecoded);
         }
-        
+
         private function getDataByPostalCode($jsonDecoded) {
-            if($jsonDecoded->postal_code == "" || !isset($jsonDecoded->request)) {
+            if($jsonDecoded->postal_code == "") {
                 $this->errorHandler->throwError(400, 'Postal code cannot be empty');
             }
             
             $messageToSend = $this->dataHandler->getDataToSendByPostalCode($jsonDecoded->postal_code);
-            $this->responder->sendResponse(200, $messageToSend);
+            $this->responder->sendResponse(200, $messageToSend, 'application/json');
+        }
+
+        public function getContentType() {
+            return $this->headerData;
+        }
+        
+        public function isContentTypeJSON() {
+            return ($this->getContentType() === 'application/json');
+        }
+        
+        private function checkRequest() {
+            return ($this->requestData != '');
         }
     }

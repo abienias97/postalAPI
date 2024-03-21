@@ -9,14 +9,12 @@
         private $password;
         private $database;
         private $connection;
-        private $errorHandler;
         
-        public function __construct($host, $user, $password, $database, ErrorHandlerInterface $errorHandler) {
+        public function __construct($host, $user, $password, $database) {
             $this->host = $host;
             $this->user = $user;
             $this->password = $password;
             $this->database = $database;
-            $this->errorHandler = $errorHandler;
             $this->openConnection();
         }
         
@@ -25,13 +23,8 @@
         }
         
         private function openConnection() {
-            try {
-                $this->connection = new mysqli($this->host, $this->user, $this->password, $this->database);
-                $this->connection->set_charset('utf8');
-            } catch (Exception $ex) {
-                $this->errorHandler->throwError(500, 'Database connection error: '.$ex);
-            }
-            
+            $this->connection = new mysqli($this->host, $this->user, $this->password, $this->database);
+            $this->connection->set_charset('utf8');
         }
         
         private function closeConnection() {
@@ -44,17 +37,19 @@
             }
         }
         
-        private function makeDataSafe($data) {
-            $safeData = $this->connection->real_escape_string($data);
+        private function sanitizeData($data) {
+            $safeData = mysqli_real_escape_string($this->connection, $data);
             return $safeData;
         }
         
         private function getAllByField($field, $value, $table) {
-            $safeField = $this->makeDataSafe($field);
-            $safeValue = $this->makeDataSafe($value);
-            $safeValue = $this->makeDataSafe($table);
-            $query = "SELECT * FROM `".$table."` WHERE `".$field."` = '".$value."';";
-            return $this->connection->query($query);
+            $safeField = $this->sanitizeData($field);
+            $safeValue = $this->sanitizeData($value);
+            $safeValue = $this->sanitizeData($table);
+            $statement = $this->connection->prepare("SELECT * FROM ".$table." WHERE ".$field." = ?;");
+            $statement->bind_param('s', $value);
+            $statement->execute();        
+            return $statement->get_result();
         }
         
         private function getRawDataByPostalCode($postalCode) {
@@ -65,7 +60,7 @@
             $response = $this->getRawDataByPostalCode($postalCode)->fetch_assoc();
             
             if($response == NULL) {
-                $this->errorHandler->throwError(400, 'Could not find any data for code: '.$postalCode);
+                return null;
             }
             
             return $response;
